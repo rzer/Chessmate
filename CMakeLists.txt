@@ -36,6 +36,7 @@ if (TOOLCHAIN STREQUAL "armgcc")
 		src/pd.c
 		src/board.c
 		src/tweener.c
+		src/bbc.c
 	)
 	
 else()
@@ -47,6 +48,8 @@ else()
 		src/board.h
 		src/tweener.c
 		src/tweener.h
+		src/bbc.c
+		src/bbc.h
 	)
 endif()
 
