@@ -42,7 +42,7 @@ void updateMenu(void){
 
 void update(void)
 {
-	
+	updateBoard();
 	pd->graphics->clear(kColorWhite);
 	pd->sprite->updateAndDrawSprites();
 	pd->graphics->setFont(font);
@@ -58,6 +58,6 @@ void update(void)
 		dy = -dy;
         
 	pd->system->drawFPS(0,0);
-	
+
 }
 

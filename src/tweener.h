@@ -11,3 +11,4 @@ Tween* tween(void* context, void (*updateFunc)(void* context, float progress), i
 void updateTweens(void);
 
 float easeOutQuad(float p);
+float easeOutQuint(float p);

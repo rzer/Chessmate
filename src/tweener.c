@@ -32,9 +32,18 @@ static void init(void){
 }
 
 void completeTween(Tween* tween){
+    if (tween == NULL) return;
     tween->updateFunc(tween->context, 1);
     tween->totalFrames = 0;
     if (tween->completeFunc != NULL) tween->completeFunc(tween->context);
+}
+void stopTween(Tween* tween) {
+    if (tween == NULL) return;
+    tween->updateFunc = NULL;
+    tween->completeFunc = NULL;
+    tween->context = NULL;
+    tween->totalFrames = 0;
+    tween->currentFrame = 0;
 }
 
 static void callUpdate(Tween* tween){
@@ -100,3 +109,9 @@ void updateTweens(void){
 float easeOutQuad(float p){
    return -(p * (p - 2)); 
 } 
+
+float easeOutQuint(float p) {
+    float f = (p - 1);
+    return f * f * f * f * f + 1;
+}
+

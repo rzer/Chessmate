@@ -3,6 +3,9 @@
 
 
 PlaydateAPI* pd;
+int buttonsCurrent;
+int buttonsPushed;
+int buttonsReleased;
 
 
 LCDFont* loadFont(const char* fontpath){
@@ -23,6 +26,7 @@ LCDBitmap* loadImage(const char* path){
 
 
 static int updateHandler(void* userdata){
+	updateButtons();
 	updateTweens();
 	update();
 	return 0;
@@ -55,4 +59,8 @@ int getRandomInRange(int lower, int upper){
 int lerpInt(int a, int b, float progress){
 	float midpoint = (float)a + progress * (float)(b - a);
 	return (int)midpoint;
+}
+
+void updateButtons(void) {
+	pd->system->getButtonState(&buttonsCurrent, &buttonsPushed, &buttonsReleased);
 }

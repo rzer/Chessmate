@@ -13,12 +13,20 @@ enum PieceType{
 
 struct Piece{
     PieceType type;
-    int oldX;
-    int oldY;
-    int x;
-    int y;
-    int position;
+    int startX;
+    int startY;
+    int i;
+    int j;
     bool isWhite;
+    LCDSprite* sprite;
+};
+
+struct Frame {
+    int startX;
+    int startY;
+    int i;
+    int j;
+    Piece* piece;
     LCDSprite* sprite;
 };
 
@@ -26,12 +34,16 @@ struct Piece{
 static bool isWhiteMove = false;
 static bool isShowed = false;
 static bool isFlipped = false;
+
 static LCDBitmap* boardBitmap;
+static LCDSprite* board;
 
 static LCDBitmap* whiteBitmaps[6];
 static LCDBitmap* blackBitmaps[6];
 
-static LCDSprite* board;
+static LCDBitmap* frameBitmap;
+static Frame* frame;
+static Tween* tweenFrame;
 
 static Piece* pieces[64];
 
@@ -41,10 +53,15 @@ static Piece* pieces[64];
 #define START_Y 14
 #define SQUARE_SIZE 28
 
+#define NORMAL_PIECE_ZINDEX 3
+#define TOOKED_PIECE_ZINDEX 4
+
 
 void initBoard(){
 
+    tweenFrame = NULL;
     boardBitmap = loadImage("images/board");
+    frameBitmap = loadImage("images/frame");
 	
     whiteBitmaps[0] = loadImage("images/pw");
     whiteBitmaps[1] = loadImage("images/rw");
@@ -65,38 +82,52 @@ void initBoard(){
 	pd->sprite->setZIndex(board,1);
     pd->sprite->setImage(board,boardBitmap, isFlipped ? kBitmapFlippedXY : kBitmapUnflipped);
 
+
+    frame = (Frame*) malloc(sizeof(struct Frame));
+    frame->piece = NULL;
+    frame->i = 0;
+    frame->j = 0;
+    frame->sprite = pd->sprite->newSprite();
+    
+    pd->sprite->moveTo(frame->sprite, getX(frame->i), getY(frame->j));
+    pd->sprite->setZIndex(frame->sprite, 2);
+    pd->sprite->setImage(frame->sprite, frameBitmap, kBitmapUnflipped);
+
     for (int i = 0; i < 64; i++)
     {
 
-        Piece* piece  = malloc(sizeof(struct Piece));
-        piece->position = 0;
+        Piece* piece  = (Piece*) malloc(sizeof(struct Piece));
         piece->sprite = NULL;
         piece->type = None;
-        piece->x = 0;
-        piece->y = 0;
-        piece->oldX = 0;
-        piece->oldY = 0;
+        piece->i = 0;
+        piece->j = 0;
         pieces[i] = piece;
     }
     
 }
 
+int getX(int posI) {
+    int i = posI;
+    if (isFlipped) i = 7 - i;
+    return START_X + i * SQUARE_SIZE;
+}
+
+int getY(int posJ) {
+    int j = posJ;
+    if (isFlipped) j = 7 - j;
+    return START_Y + j * SQUARE_SIZE;
+}
+
 void updatePiecePosition(Piece* piece){
     if (piece->sprite == NULL) return;
-
-    int i = isFlipped ? 7 - piece->x : piece->x;
-    int j = isFlipped ? 7 - piece->y : piece->y;
-
-    int x = START_X + i * SQUARE_SIZE;
-    int y = START_Y + j * SQUARE_SIZE;
-    
-    pd->sprite->moveTo(piece->sprite,x,y);
+    pd->sprite->moveTo(piece->sprite,getX(piece->i),getY(piece->j));
 }
 
 void showBoard(void){
     if (isShowed) return;
     isShowed = true;
 	pd->sprite->addSprite(board);
+    pd->sprite->addSprite(frame->sprite);
 }
 
 void hideBoard(void){
@@ -105,6 +136,76 @@ void hideBoard(void){
     pd->sprite->removeSprite(board);
 }
 
+void updateBoard(void) {
+    if (!isShowed) return;
+    
+    if (buttonsPushed & kButtonLeft) moveFrame(-1, 0);
+    if (buttonsPushed & kButtonRight) moveFrame(1,0);
+
+    if (buttonsPushed & kButtonUp) moveFrame(0, -1);
+    if (buttonsPushed & kButtonDown) moveFrame(0, 1);
+
+    if (buttonsPushed & kButtonA) touchPiece();
+}
+
+void touchPiece(void) {
+    //Опускаем фигуру
+    if (frame->piece != NULL) { 
+        Piece* putPiece = frame->piece;
+        pd->sprite->setZIndex(putPiece->sprite, NORMAL_PIECE_ZINDEX);
+        putPiece->i = frame->i;
+        putPiece->j = frame->j;
+        frame->piece = NULL;
+        return;
+    }
+    //Берём фигуру
+    Piece* tookedPiece = getPieceAtPosition(frame->i, frame->j);
+    if (tookedPiece == NULL) return;
+    frame->piece = tookedPiece;
+    pd->sprite->setZIndex(tookedPiece->sprite, TOOKED_PIECE_ZINDEX);
+}
+
+void frameTween(Frame* frame, float t) {
+    int newX = getX(frame->i);
+    int newY = getY(frame->j);
+    t = easeOutQuint(t);
+
+    int x = lerpInt(frame->startX, newX, t);
+    int y = lerpInt(frame->startY, newY, t);
+
+    pd->sprite->moveTo(frame->sprite, x, y);
+
+    if (frame->piece != NULL) {
+        pd->sprite->moveTo(frame->piece->sprite, x, y);
+    }
+}
+
+void moveFrame(int di, int dj) {
+
+    if (isFlipped) {
+        di = -di;
+        dj = -dj;
+    }
+
+    stopTween(tweenFrame);
+   
+    float x,y;
+    pd->sprite->getPosition(frame->sprite, &x, &y);
+    frame->startX = (int)x;
+    frame->startY = (int)y;
+
+    
+   
+    if (di < 0 && frame->i >= -di) frame->i += di;
+    if (di > 0 && frame->i <= 7 - di) frame->i += di;
+    if (dj < 0 && frame->j >= -dj) frame->j += dj;
+    if (dj > 0 && frame->j <= 7 - dj) frame->j += dj;
+
+    
+    tweenFrame = tween(frame, frameTween, 10, NULL);
+}
+
+
 void swapBoard(void){
     isFlipped = !isFlipped;
     pd->sprite->setImage(board,boardBitmap, isFlipped ? kBitmapFlippedXY : kBitmapUnflipped);
@@ -112,6 +213,7 @@ void swapBoard(void){
     {
         updatePiecePosition(pieces[i]);
     }
+
 }
 
 void menuBoard(){
@@ -121,47 +223,43 @@ void menuBoard(){
 
 void pieceTween(Piece* piece, float t){
 
-
-    int i = isFlipped ? 7 - piece->x : piece->x;
-    int j = isFlipped ? 7 - piece->y : piece->y;
-
-    int newX = START_X + i * SQUARE_SIZE;
-    int newY = START_Y + j * SQUARE_SIZE;
-
-    i = isFlipped ? 7 - piece->oldX : piece->oldX;
-    j = isFlipped ? 7 - piece->oldY : piece->oldY;
-
-    int oldX = START_X + i * SQUARE_SIZE;
-    int oldY = START_Y + j * SQUARE_SIZE;
+    int newX = getX(piece->i);
+    int newY = getY(piece->j);
 
     t = easeOutQuad(t);
-
-    pd->sprite->moveTo(piece->sprite,lerpInt(oldX, newX, t),lerpInt(oldY, newY, t));
+    pd->sprite->moveTo(piece->sprite,lerpInt(piece->startX, newX, t),lerpInt(piece->startY, newY, t));
 }
 
+
 void tweenRandom(Piece* piece){
-   piece->oldX = piece->x;
-   piece->oldY = piece->y;
-   piece->position = getRandomInRange(0,63);
-   piece->x = piece->position % 8;
-   piece->y = piece->position / 8;
+   
+   float x, y;
+   pd->sprite->getPosition(piece->sprite, &x, &y);
+   piece->startX = (int)x;
+   piece->startY = (int)y;
+
+   pd->system->logToConsole("coords %f, %f", x, y);
+   int pos = getRandomInRange(0,63);
+   piece->i = pos % 8;
+   piece->j = pos / 8;
    tween(piece, pieceTween, 20 + getRandomInRange(10,20), tweenRandom);
 }
 
 void newGame(void){
     loadFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    tweenRandom(getPieceAtPosition(56));
-    tweenRandom(getPieceAtPosition(58));
-    tweenRandom(getPieceAtPosition(4));
+    tweenRandom(getPieceAtPosition(0,0));
+    tweenRandom(getPieceAtPosition(1, 0));
+    tweenRandom(getPieceAtPosition(1, 1));
+
 }
 
-Piece* getPieceAtPosition(int position){
+Piece* getPieceAtPosition(int i, int j){
     Piece* emptyPiece = NULL;
-    for (int i = 0; i < 64; i++)
+    for (int index = 0; index < 64; index++)
     {
-        Piece* result = pieces[i];
-        if (result->position == position) return result;
+        Piece* result = pieces[index];
+        if (result->i == i && result->j == j) return result;
         if (emptyPiece != NULL) continue;
         if (result->type == None) emptyPiece = result;
     }
@@ -174,20 +272,19 @@ LCDBitmap* getPieceBitmap(PieceType type, bool isWhite){
     return blackBitmaps[(int)type-1];
 }
 
-void setPiece(int position, enum PieceType type, bool isWhite){
-    Piece* piece = getPieceAtPosition(position);
+void setPiece(int i, int j, enum PieceType type, bool isWhite){
+    Piece* piece = getPieceAtPosition(i,j);
     piece->type = type;
     piece->isWhite = isWhite;
-    piece->position = position;
-    piece->x = position % 8;
-    piece->y = position / 8;
+    piece->i = i;
+    piece->j = j;
 
-    
+  
     if (piece->sprite == NULL){
         
         piece->sprite = pd->sprite->newSprite();
         pd->sprite->addSprite(piece->sprite);
-        pd->sprite->setZIndex(piece->sprite,2);
+        pd->sprite->setZIndex(piece->sprite,NORMAL_PIECE_ZINDEX);
     }
     
     LCDBitmap* bitmap = getPieceBitmap(type,isWhite);
@@ -209,19 +306,21 @@ void loadFen(const char* fen){
         }
 
         if (currentMode == 0){
+            int i = position % 8;
+            int j = position / 8;
             switch (letter){
-                case 'p' : setPiece(position, Pawn, false); break;
-                case 'r' : setPiece(position, Rook, false); break;
-                case 'n' : setPiece(position, Knight, false); break;
-                case 'b' : setPiece(position, Bishop, false); break;
-                case 'q' : setPiece(position, Queen, false); break;
-                case 'k' : setPiece(position, King, false); break;
-                case 'P' : setPiece(position, Pawn, true); break;
-                case 'R' : setPiece(position, Rook, true); break;
-                case 'N' : setPiece(position, Knight, true); break;
-                case 'B' : setPiece(position, Bishop, true); break;
-                case 'Q' : setPiece(position, Queen, true); break;
-                case 'K' : setPiece(position, King, true); break;
+                case 'p' : setPiece(i, j, Pawn, false); break;
+                case 'r' : setPiece(i, j, Rook, false); break;
+                case 'n' : setPiece(i, j, Knight, false); break;
+                case 'b' : setPiece(i, j, Bishop, false); break;
+                case 'q' : setPiece(i, j, Queen, false); break;
+                case 'k' : setPiece(i, j, King, false); break;
+                case 'P' : setPiece(i, j, Pawn, true); break;
+                case 'R' : setPiece(i, j, Rook, true); break;
+                case 'N' : setPiece(i, j, Knight, true); break;
+                case 'B' : setPiece(i, j, Bishop, true); break;
+                case 'Q' : setPiece(i, j, Queen, true); break;
+                case 'K' : setPiece(i, j, King, true); break;
                 case '/' : position--; break;
                 case '1' : break;
                 case '2' : position++; break;
