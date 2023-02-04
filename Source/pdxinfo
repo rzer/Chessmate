@@ -1,0 +1,5 @@
+name=Chessmate
+author=Rzer
+description=Small chess engine
+bundleID=ru.rzer.chessmate
+imagePath=menu

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+export PLAYDATE_SDK_PATH="C:\Users\rzer\Documents\PlaydateSDK"
+export GAME_NAME="HelloWorld"
+
+
+cd "$(dirname "$0")"
+export PLAYDATE_GAME_NAME="${GAME_NAME}Emulator"
+rm -Rf build-sim
+mkdir build-sim
+cd build-sim
+cmake ..
+cd ..
+

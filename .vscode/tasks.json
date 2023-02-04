@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "buildRelease",
+            "type": "shell",
+            "command": "./build_release"
+        },
+        {
+            "label": "buildEmulator",
+            "type": "shell",
+            "command": "./build_emulator",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
