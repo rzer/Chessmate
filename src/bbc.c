@@ -629,11 +629,13 @@ void print_bitboard(U64 bitboard)
 void print_board()
 {
     // print offset
-    printf("\n");
+    pd->system->logToConsole("");
 
     // loop over board ranks
     for (int rank = 0; rank < 8; rank++)
     {
+
+        char* line = "                ";
         // loop ober board files
         for (int file = 0; file < 8; file++)
         {
@@ -655,36 +657,33 @@ void print_board()
                     // get piece code
                     piece = bb_piece;
             }
+
+            line[file * 2] = (piece == -1) ? "-" : ascii_pieces[piece];
             
-            // print different piece set depending on OS
-            #ifdef WIN64
-                printf(" %c", (piece == -1) ? '.' : ascii_pieces[piece]);
-            #else
-                printf(" %s", (piece == -1) ? "." : unicode_pieces[piece]);
-            #endif
         }
         
         // print new line every rank
-        printf("\n");
+        pd->system->logToConsole(line);
+        
     }
     
     // print board files
-    printf("\n     a b c d e f g h\n\n");
+    pd->system->logToConsole("\n     a b c d e f g h\n\n");
     
     // print side to move
-    printf("     Side:     %s\n", !side ? "white" : "black");
+    pd->system->logToConsole("     Side:     %s\n", !side ? "white" : "black");
     
     // print enpassant square
-    printf("     Enpassant:   %s\n", (enpassant != no_sq) ? square_to_coordinates[enpassant] : "no");
+    pd->system->logToConsole("     Enpassant:   %s\n", (enpassant != no_sq) ? square_to_coordinates[enpassant] : "no");
     
     // print castling rights
-    printf("     Castling:  %c%c%c%c\n\n", (castle & wk) ? 'K' : '-',
+    pd->system->logToConsole("     Castling:  %c%c%c%c\n\n", (castle & wk) ? 'K' : '-',
                                            (castle & wq) ? 'Q' : '-',
                                            (castle & bk) ? 'k' : '-',
                                            (castle & bq) ? 'q' : '-');
     
     // print hash key
-    printf("     Hash key:  %llx\n\n", hash_key);
+    pd->system->logToConsole("     Hash key:  %llx\n\n", hash_key);
 }
 
 // reset board variables
@@ -1753,6 +1752,11 @@ const int castling_rights[64] = {
     15, 15, 15, 15, 15, 15, 15, 15,
     13, 15, 15, 15, 12, 15, 15, 14
 };
+
+void ai_makeMove(int move) {
+    make_move(move, all_moves);
+    print_board();
+}
 
 // make move on chess board
 static inline int make_move(int move, int move_flag)
@@ -4163,67 +4167,85 @@ void search_position(int depth)
  ==================================
 \**********************************/
 
-// parse user/GUI move string input (e.g. "e7e8q")
-int parse_move(char *move_string)
-{
+void ai_findBestMove(int depth) {
+    search_position(depth);
+}
+
+void ai_loadFen(char* fen) {
+    parse_fen(fen);
+    clear_hash_table();
+}
+
+int ai_isLegalMove(int source_square, int target_square, char promotedPiece) {
     // create move list instance
     moves move_list[1];
-    
+
     // generate moves
     generate_moves(move_list);
-    
-    // parse source square
-    int source_square = (move_string[0] - 'a') + (8 - (move_string[1] - '0')) * 8;
-    
-    // parse target square
-    int target_square = (move_string[2] - 'a') + (8 - (move_string[3] - '0')) * 8;
-    
+
+    pd->system->logToConsole("Move list count %i", move_list->count);
+
     // loop over the moves within a move list
     for (int move_count = 0; move_count < move_list->count; move_count++)
     {
         // init move
         int move = move_list->moves[move_count];
-        
+        pd->system->logToConsole("source_square %i -> target_square %i", get_move_source(move), get_move_target(move));
+
         // make sure source & target squares are available within the generated move
         if (source_square == get_move_source(move) && target_square == get_move_target(move))
         {
+
             // init promoted piece
             int promoted_piece = get_move_promoted(move);
-            
+
             // promoted piece is available
             if (promoted_piece)
             {
                 // promoted to queen
-                if ((promoted_piece == Q || promoted_piece == q) && move_string[4] == 'q')
+                if ((promoted_piece == Q || promoted_piece == q) && promotedPiece == 'q')
                     // return legal move
                     return move;
-                
+
                 // promoted to rook
-                else if ((promoted_piece == R || promoted_piece == r) && move_string[4] == 'r')
+                else if ((promoted_piece == R || promoted_piece == r) && promotedPiece == 'r')
                     // return legal move
                     return move;
-                
+
                 // promoted to bishop
-                else if ((promoted_piece == B || promoted_piece == b) && move_string[4] == 'b')
+                else if ((promoted_piece == B || promoted_piece == b) && promotedPiece == 'b')
                     // return legal move
                     return move;
-                
+
                 // promoted to knight
-                else if ((promoted_piece == N || promoted_piece == n) && move_string[4] == 'n')
+                else if ((promoted_piece == N || promoted_piece == n) && promotedPiece == 'n')
                     // return legal move
                     return move;
-                
+
                 // continue the loop on possible wrong promotions (e.g. "e7e8f")
                 continue;
             }
-            
+
+
             // return legal move
             return move;
         }
     }
-    
+
     // return illegal move
     return 0;
+}
+
+// parse user/GUI move string input (e.g. "e7e8q")
+int parse_move(char *move_string)
+{
+    // parse source square
+    int source_square = (move_string[0] - 'a') + (8 - (move_string[1] - '0')) * 8;
+
+    // parse target square
+    int target_square = (move_string[2] - 'a') + (8 - (move_string[3] - '0')) * 8;
+
+    return ai_isLegalMove(source_square, target_square, move_string[4]);
 }
 
 // parse UCI "position" command

@@ -1,5 +1,6 @@
 #include "pd.h"
 #include "board.h"
+#include "bbc.h"
 
 enum PieceType{
     None = 0,
@@ -148,16 +149,33 @@ void updateBoard(void) {
     if (buttonsPushed & kButtonA) touchPiece();
 }
 
+int toPosition(int i, int j) {
+    return i + j * 8;
+}
+
 void touchPiece(void) {
     //Опускаем фигуру
     if (frame->piece != NULL) { 
         Piece* putPiece = frame->piece;
-        pd->sprite->setZIndex(putPiece->sprite, NORMAL_PIECE_ZINDEX);
-        putPiece->i = frame->i;
-        putPiece->j = frame->j;
         frame->piece = NULL;
+        pd->sprite->setZIndex(putPiece->sprite, NORMAL_PIECE_ZINDEX);
+
+        int move = ai_isLegalMove(toPosition(putPiece->i, putPiece->j), toPosition(frame->i, frame->j), 'q');
+        pd->system->logToConsole("%i -> %i (%i)", toPosition(putPiece->i, putPiece->j), toPosition(frame->i, frame->j), move);
+        
+        //Ход не валидный
+        if (move == 0) {
+            pd->sprite->moveTo(putPiece->sprite, getX(putPiece->i), getY(putPiece->j));
+        }
+        else {
+            putPiece->i = frame->i;
+            putPiece->j = frame->j;
+            ai_makeMove(move);
+        }
+
         return;
     }
+
     //Берём фигуру
     Piece* tookedPiece = getPieceAtPosition(frame->i, frame->j);
     if (tookedPiece == NULL) return;
@@ -246,12 +264,11 @@ void tweenRandom(Piece* piece){
 }
 
 void newGame(void){
-    loadFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    loadFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ");
 
-    tweenRandom(getPieceAtPosition(0,0));
-    tweenRandom(getPieceAtPosition(1, 0));
-    tweenRandom(getPieceAtPosition(1, 1));
-
+    //tweenRandom(getPieceAtPosition(0,0));
+    //tweenRandom(getPieceAtPosition(1, 0));
+    //tweenRandom(getPieceAtPosition(1, 1));
 }
 
 Piece* getPieceAtPosition(int i, int j){
@@ -296,6 +313,9 @@ void setPiece(int i, int j, enum PieceType type, bool isWhite){
 void loadFen(const char* fen){
     int position = 0;
     int currentMode =0;
+
+    ai_loadFen(fen);
+    
 
     for(int i = 0; i < strlen(fen); i++) {
         char letter = fen[i];
