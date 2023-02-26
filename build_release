@@ -1,7 +1,8 @@
 #!/bin/bash
 
 export PLAYDATE_SDK_PATH="/Users/rzer/Developer/PlaydateSDK"
-export GAME_NAME="HelloWorld"
+#export PLAYDATE_SDK_PATH="C:\Users\rzer\Documents\PlaydateSDK"
+export GAME_NAME="Chessmate"
 
 
 cd "$(dirname "$0")"
@@ -12,4 +13,5 @@ mkdir build-arm
 cd build-arm
 cmake -DCMAKE_TOOLCHAIN_FILE=$PLAYDATE_SDK_PATH/C_API/buildsupport/arm.cmake ..
 make
+
 

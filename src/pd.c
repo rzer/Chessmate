@@ -3,9 +3,9 @@
 
 
 PlaydateAPI* pd;
-int buttonsCurrent;
-int buttonsPushed;
-int buttonsReleased;
+PDButtons buttonsCurrent;
+PDButtons buttonsPushed;
+PDButtons buttonsReleased;
 
 
 LCDFont* loadFont(const char* fontpath){

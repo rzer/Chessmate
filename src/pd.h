@@ -3,9 +3,9 @@
 #include "stdbool.h"
 
 extern PlaydateAPI* pd;
-extern int buttonsCurrent;
-extern int buttonsPushed;
-extern int buttonsReleased;
+extern PDButtons buttonsCurrent;
+extern PDButtons buttonsPushed;
+extern PDButtons buttonsReleased;
 
 
 extern void update(void);

@@ -594,7 +594,7 @@ U64 generate_hash_key()
 void print_bitboard(U64 bitboard)
 {
     // print offset
-    printf("\n");
+    pd->system->logToConsole("");
 
     // loop over board ranks
     for (int rank = 0; rank < 8; rank++)
@@ -607,22 +607,22 @@ void print_bitboard(U64 bitboard)
             
             // print ranks
             if (!file)
-                printf("  %d ", 8 - rank);
+                pd->system->logToConsole("  %d ", 8 - rank);
             
             // print bit state (either 1 or 0)
-            printf(" %d", get_bit(bitboard, square) ? 1 : 0);
+            pd->system->logToConsole(" %d", get_bit(bitboard, square) ? 1 : 0);
             
         }
         
         // print new line every rank
-        printf("\n");
+        pd->system->logToConsole("");
     }
     
     // print board files
-    printf("\n     a b c d e f g h\n\n");
+    pd->system->logToConsole("\n     a b c d e f g h\n\n");
     
     // print bitboard as unsigned decimal number
-    printf("     Bitboard: %llud\n\n", bitboard);
+    pd->system->logToConsole("     Bitboard: %llud\n\n", bitboard);
 }
 
 // print board
@@ -644,7 +644,7 @@ void print_board()
             
             // print ranks
             if (!file)
-                printf("  %d ", 8 - rank);
+                pd->system->logToConsole("  %d ", 8 - rank);
             
             // define piece variable
             int piece = -1;
@@ -1386,7 +1386,7 @@ U64 find_magic_number(int square, int relevant_bits, int bishop)
     }
     
     // if magic number doesn't work
-    printf("  Magic number fails!\n");
+    pd->system->logToConsole("  Magic number fails!");
     return 0ULL;
 }
 
@@ -1552,7 +1552,7 @@ static inline int is_square_attacked(int square, int side)
 // print attacked squares
 void print_attacked_squares(int side)
 {
-    printf("\n");
+    pd->system->logToConsole("");
     
     // loop over board ranks
     for (int rank = 0; rank < 8; rank++)
@@ -1565,18 +1565,18 @@ void print_attacked_squares(int side)
             
             // print ranks
             if (!file)
-                printf("  %d ", 8 - rank);
+                pd->system->logToConsole("  %d ", 8 - rank);
             
             // check whether current square is attacked or not
-            printf(" %d", is_square_attacked(square, side) ? 1 : 0);
+            pd->system->logToConsole(" %d", is_square_attacked(square, side) ? 1 : 0);
         }
         
         // print new line every rank
-        printf("\n");
+        pd->system->logToConsole("");
     }
     
     // print files
-    printf("\n     a b c d e f g h\n\n");
+    pd->system->logToConsole("\n     a b c d e f g h\n\n");
 }
 
 /*
@@ -1691,11 +1691,11 @@ void print_move_list(moves *move_list)
     // do nothing on empty move list
     if (!move_list->count)
     {
-        printf("\n     No move in the move list!\n");
+        pd->system->logToConsole("\n     No move in the move list!\n");
         return;
     }
     
-    printf("\n     move    piece     capture   double    enpass    castling\n\n");
+    pd->system->logToConsole("\n     move    piece     capture   double    enpass    castling\n\n");
     
     // loop over moves within a move list
     for (int move_count = 0; move_count < move_list->count; move_count++)
@@ -1705,7 +1705,7 @@ void print_move_list(moves *move_list)
         
         #ifdef WIN64
             // print move
-            printf("      %s%s%c   %c         %d         %d         %d         %d\n", square_to_coordinates[get_move_source(move)],
+        pd->system->logToConsole("      %s%s%c   %c         %d         %d         %d         %d\n", square_to_coordinates[get_move_source(move)],
                                                                                   square_to_coordinates[get_move_target(move)],
                                                                                   get_move_promoted(move) ? promoted_pieces[get_move_promoted(move)] : ' ',
                                                                                   ascii_pieces[get_move_piece(move)],
@@ -1715,7 +1715,7 @@ void print_move_list(moves *move_list)
                                                                                   get_move_castling(move) ? 1 : 0);
         #else
             // print move
-            printf("     %s%s%c   %s         %d         %d         %d         %d\n", square_to_coordinates[get_move_source(move)],
+        pd->system->logToConsole("     %s%s%c   %s         %d         %d         %d         %d\n", square_to_coordinates[get_move_source(move)],
                                                                                   square_to_coordinates[get_move_target(move)],
                                                                                   get_move_promoted(move) ? promoted_pieces[get_move_promoted(move)] : ' ',
                                                                                   unicode_pieces[get_move_piece(move)],
@@ -1728,7 +1728,7 @@ void print_move_list(moves *move_list)
     }
     
     // print total number of moves
-    printf("\n\n     Total number of moves: %d\n\n", move_list->count);
+    pd->system->logToConsole("\n\n     Total number of moves: %d\n\n", move_list->count);
 
 }
 
@@ -1779,10 +1779,7 @@ const int castling_rights[64] = {
     13, 15, 15, 15, 12, 15, 15, 14
 };
 
-void ai_makeMove(int move) {
-    make_move(move, all_moves);
-    print_board();
-}
+
 
 // make move on chess board
 static inline int make_move(int move, int move_flag)
@@ -2050,6 +2047,11 @@ static inline int make_move(int move, int move_flag)
             // don't make it
             return 0;
     }
+}
+
+void ai_makeMove(int move) {
+    make_move(move, all_moves);
+    print_board();
 }
 
 // generate all moves
@@ -2529,55 +2531,6 @@ static inline void perft_driver(int depth)
     }
 }
 
-// perft test
-void perft_test(int depth)
-{
-    printf("\n     Performance test\n\n");
-    
-    // create move list instance
-    moves move_list[1];
-    
-    // generate moves
-    generate_moves(move_list);
-    
-    // init start time
-    long start = get_time_ms();
-    
-    // loop over generated moves
-    for (int move_count = 0; move_count < move_list->count; move_count++)
-    {   
-        // preserve board state
-        copy_board();
-        
-        // make move
-        if (!make_move(move_list->moves[move_count], all_moves))
-            // skip to the next move
-            continue;
-        
-        // cummulative nodes
-        long cummulative_nodes = nodes;
-        
-        // call perft driver recursively
-        perft_driver(depth - 1);
-        
-        // old nodes
-        long old_nodes = nodes - cummulative_nodes;
-        
-        // take back
-        take_back();
-        
-        // print move
-        printf("     move: %s%s%c  nodes: %ld\n", square_to_coordinates[get_move_source(move_list->moves[move_count])],
-                                                  square_to_coordinates[get_move_target(move_list->moves[move_count])],
-                                                  get_move_promoted(move_list->moves[move_count]) ? promoted_pieces[get_move_promoted(move_list->moves[move_count])] : ' ',
-                                                  old_nodes);
-    }
-    
-    // print results
-    printf("\n    Depth: %d\n", depth);
-    printf("    Nodes: %lld\n", nodes);
-    printf("     Time: %ld\n\n", get_time_ms() - start);
-}
 
 
 /**********************************\
@@ -3464,7 +3417,7 @@ void init_hash_table(int mb)
     // free hash table if not empty
     if (hash_table != NULL)
     {
-        printf("    Clearing hash memory...\n");
+        pd->system->logToConsole("    Clearing hash memory...");
           
         // free hash table dynamic memory
         free(hash_table);
@@ -3476,7 +3429,7 @@ void init_hash_table(int mb)
     // if allocation has failed
     if (hash_table == NULL)
     {
-        printf("    Couldn't allocate memory for hash table, tryinr %dMB...", mb / 2);
+        pd->system->logToConsole("Couldn't allocate memory for hash table, tryinr %dMB...", mb / 2);
         
         // try to allocate with half size
         init_hash_table(mb / 2);
@@ -3488,7 +3441,7 @@ void init_hash_table(int mb)
         // clear hash table
         clear_hash_table();
         
-        printf("    Hash table is initialied with %d entries\n", hash_entries);
+        pd->system->logToConsole("Hash table is initialied with %d entries\n", hash_entries);
     }
     
     
@@ -3692,14 +3645,14 @@ static inline int sort_moves(moves *move_list)
 // print move scores
 void print_move_scores(moves *move_list)
 {
-    printf("     Move scores:\n\n");
+    pd->system->logToConsole("Move scores:");
         
     // loop over moves within a move list
     for (int count = 0; count < move_list->count; count++)
     {
-        printf("     move: ");
+        pd->system->logToConsole("move: ");
         print_move(move_list->moves[count]);
-        printf(" score: %d\n", score_move(move_list->moves[count]));
+        pd->system->logToConsole("score: %d\n", score_move(move_list->moves[count]));
     }
 }
 
@@ -4461,113 +4414,12 @@ void parse_go(char *command)
         depth = 64;
 
     // print debug info
-    printf("time: %d  start: %u  stop: %u  depth: %d  timeset:%d\n",
+    pd->system->logToConsole("time: %d  start: %u  stop: %u  depth: %d  timeset:%d\n",
             time, starttime, stoptime, depth, timeset);
 
     // search position
     search_position(depth);
 }
-
-// main UCI loop
-void uci_loop()
-{
-    // max hash MB
-    int max_hash = 128;
-    
-    // default MB value
-    int mb = 64;
-
-    // reset STDIN & STDOUT buffers
-    setbuf(stdin, NULL);
-    setbuf(stdout, NULL);
-    
-    // define user / GUI input buffer
-    char input[2000];
-    
-    // print engine info
-    printf("id name BBC %s\n", version);
-    printf("id author Code Monkey King\n");
-    printf("option name Hash type spin default 64 min 4 max %d\n", max_hash);
-    printf("uciok\n");
-    
-    // main loop
-    while (1)
-    {
-        // reset user /GUI input
-        memset(input, 0, sizeof(input));
-        
-        // make sure output reaches the GUI
-        fflush(stdout);
-        
-        // get user / GUI input
-        if (!fgets(input, 2000, stdin))
-            // continue the loop
-            continue;
-        
-        // make sure input is available
-        if (input[0] == '\n')
-            // continue the loop
-            continue;
-        
-        // parse UCI "isready" command
-        if (strncmp(input, "isready", 7) == 0)
-        {
-            printf("readyok\n");
-            continue;
-        }
-        
-        // parse UCI "position" command
-        else if (strncmp(input, "position", 8) == 0)
-        {
-            // call parse position function
-            parse_position(input);
-        
-            // clear hash table
-            clear_hash_table();
-        }
-        // parse UCI "ucinewgame" command
-        else if (strncmp(input, "ucinewgame", 10) == 0)
-        {
-            // call parse position function
-            parse_position("position startpos");
-            
-            // clear hash table
-            clear_hash_table();
-        }
-        // parse UCI "go" command
-        else if (strncmp(input, "go", 2) == 0)
-            // call parse go function
-            parse_go(input);
-        
-        // parse UCI "quit" command
-        else if (strncmp(input, "quit", 4) == 0)
-            // quit from the UCI loop (terminate program)
-            break;
-        
-        // parse UCI "uci" command
-        else if (strncmp(input, "uci", 3) == 0)
-        {
-            // print engine info
-            printf("id name BBC %s\n", version);
-            printf("id author Code Monkey King\n");
-            printf("uciok\n");
-        }
-        
-        else if (!strncmp(input, "setoption name Hash value ", 26)) {			
-            // init MB
-            sscanf(input,"%*s %*s %*s %*s %d", &mb);
-            
-            // adjust MB if going beyond the aloowed bounds
-            if(mb < 4) mb = 4;
-            if(mb > max_hash) mb = max_hash;
-            
-            // set hash table size in MB
-            printf("    Set hash table size to %dMB\n", mb);
-            init_hash_table(mb);
-        }
-    }
-}
-
 
 /**********************************\
  ==================================
