@@ -1627,6 +1627,31 @@ void print_attacked_squares(int side)
 // extract castling flag
 #define get_move_castling(move) (move & 0x800000)
 
+
+int ai_getSourceIndex(int move) {
+    return get_move_source(move);
+}
+
+int ai_getTargetIndex(int move) {
+    return get_move_target(move);
+}
+
+int ai_getPromoted(int move) {
+    return get_move_promoted(move);
+}
+
+
+bool ai_isCapture(int move) {
+    return get_move_capture(move) > 0;
+}
+bool ai_isEnpassant(int move) {
+    return get_move_enpassant(move) > 0;
+}
+
+bool ai_isCastling(int move) {
+    return get_move_castling(move) > 0;
+}
+
 // move list structure
 typedef struct {
     // moves
@@ -1649,12 +1674,13 @@ static inline void add_move(moves *move_list, int move)
 // print move (for UCI purposes)
 void print_move(int move)
 {
+
     if (get_move_promoted(move))
-        printf("%s%s%c", square_to_coordinates[get_move_source(move)],
+        pd->system->logToConsole("%s%s%c", square_to_coordinates[get_move_source(move)],
                            square_to_coordinates[get_move_target(move)],
                            promoted_pieces[get_move_promoted(move)]);
     else
-        printf("%s%s", square_to_coordinates[get_move_source(move)],
+        pd->system->logToConsole("%s%s", square_to_coordinates[get_move_source(move)],
                            square_to_coordinates[get_move_target(move)]);
 }
 
@@ -2276,17 +2302,21 @@ static inline void generate_moves(moves *move_list)
             // loop over source squares of piece bitboard copy
             while (bitboard)
             {
+
                 // init source square
                 source_square = get_ls1b_index(bitboard);
                 
                 // init piece attacks in order to get set of target squares
                 attacks = knight_attacks[source_square] & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+
+     
                 
                 // loop over target squares available from generated attacks
                 while (attacks)
                 {
                     // init target square
                     target_square = get_ls1b_index(attacks);    
+
                     
                     // quiet move
                     if (!get_bit(((side == white) ? occupancies[black] : occupancies[white]), target_square))
@@ -4130,31 +4160,27 @@ void search_position(int depth)
         {
             // print search info
             if (score > -mate_value && score < -mate_score)
-                printf("info score mate %d depth %d nodes %lld time %d pv ", -(score + mate_value) / 2 - 1, current_depth, nodes, get_time_ms() - start);
+                pd->system->logToConsole("info score mate %d depth %d nodes %lld time %d pv ", -(score + mate_value) / 2 - 1, current_depth, nodes, get_time_ms() - start);
             
             else if (score > mate_score && score < mate_value)
-                printf("info score mate %d depth %d nodes %lld time %d pv ", (mate_value - score) / 2 + 1, current_depth, nodes, get_time_ms() - start);   
+                pd->system->logToConsole("info score mate %d depth %d nodes %lld time %d pv ", (mate_value - score) / 2 + 1, current_depth, nodes, get_time_ms() - start);
             
             else
-                printf("info score cp %d depth %d nodes %lld time %d pv ", score, current_depth, nodes, get_time_ms() - start);
+                pd->system->logToConsole("info score cp %d depth %d nodes %lld time %d pv ", score, current_depth, nodes, get_time_ms() - start);
             
             // loop over the moves within a PV line
             for (int count = 0; count < pv_length[0]; count++)
             {
                 // print PV move
                 print_move(pv_table[0][count]);
-                printf(" ");
             }
             
-            // print new line
-            printf("\n");
         }
     }
 
     // print best move
-    printf("bestmove ");
+    pd->system->logToConsole("bestmove ");
     print_move(pv_table[0][0]);
-    printf("\n");
 }
 
 /**********************************\
@@ -4167,8 +4193,12 @@ void search_position(int depth)
  ==================================
 \**********************************/
 
-void ai_findBestMove(int depth) {
+int ai_findBestMove(int depth) {
     search_position(depth);
+    return pv_table[0][0];
+}
+bool ai_isWhiteMove(void) {
+    return side == white;
 }
 
 void ai_loadFen(char* fen) {
@@ -4547,6 +4577,8 @@ void uci_loop()
  ==================================
 \**********************************/
 
+
+
 // init all variables
 void init_all()
 {
@@ -4564,7 +4596,11 @@ void init_all()
     init_evaluation_masks();
     
     // init hash table with default 64 MB
-    init_hash_table(64);
+    init_hash_table(10);
+}
+
+void ai_init(void) {
+    init_all();
 }
 
 

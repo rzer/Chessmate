@@ -60,6 +60,8 @@ static Piece* pieces[64];
 
 void initBoard(){
 
+    ai_init();
+
     tweenFrame = NULL;
     boardBitmap = loadImage("images/board");
     frameBitmap = loadImage("images/frame");
@@ -121,6 +123,12 @@ int getY(int posJ) {
 
 void updatePiecePosition(Piece* piece){
     if (piece->sprite == NULL) return;
+
+    if (piece->i == -1) {
+        pd->sprite->moveTo(piece->sprite, getX(-4), getY(piece->isWhite ? 0 : 7));
+        return;
+    }
+
     pd->sprite->moveTo(piece->sprite,getX(piece->i),getY(piece->j));
 }
 
@@ -147,6 +155,11 @@ void updateBoard(void) {
     if (buttonsPushed & kButtonDown) moveFrame(0, 1);
 
     if (buttonsPushed & kButtonA) touchPiece();
+    if (buttonsPushed & kButtonB) thinkMove();
+}
+void thinkMove(void) {
+    int move = ai_findBestMove(5);
+    makeMove(move);
 }
 
 int toPosition(int i, int j) {
@@ -168,9 +181,7 @@ void touchPiece(void) {
             pd->sprite->moveTo(putPiece->sprite, getX(putPiece->i), getY(putPiece->j));
         }
         else {
-            putPiece->i = frame->i;
-            putPiece->j = frame->j;
-            ai_makeMove(move);
+            makeMove(move);
         }
 
         return;
@@ -179,9 +190,74 @@ void touchPiece(void) {
     //Берём фигуру
     Piece* tookedPiece = getPieceAtPosition(frame->i, frame->j);
     if (tookedPiece == NULL) return;
+    if (ai_isWhiteMove() != tookedPiece->isWhite) return;
     frame->piece = tookedPiece;
     pd->sprite->setZIndex(tookedPiece->sprite, TOOKED_PIECE_ZINDEX);
 }
+
+void removePiece(Piece* removedPiece) {
+    removedPiece->i = -1;
+    removedPiece->j = -1;
+    updatePiecePosition(removedPiece);
+}
+
+void makeMove(int move) {
+    ai_makeMove(move);
+
+    if (frame->piece != NULL) {
+        Piece* putPiece = frame->piece;
+        frame->piece = NULL;
+        pd->sprite->setZIndex(putPiece->sprite, NORMAL_PIECE_ZINDEX);
+    }
+
+    int sourceIndex = ai_getSourceIndex(move);
+    int targetIndex = ai_getTargetIndex(move);
+    int promotedPiece = ai_getPromoted(move);
+    bool isCapture = ai_isCapture(move);
+    bool isEnpass = ai_isEnpassant(move);
+    bool isCastling = ai_isCastling(move);
+
+    int sI = sourceIndex % 8;
+    int sJ = sourceIndex / 8;
+
+    int tI = targetIndex % 8;
+    int tJ = targetIndex / 8;
+
+    Piece* sourcePiece = getPieceAtPosition(sI,sJ);
+    
+    if (isCastling) {
+
+        pd->system->logToConsole("castling");
+        int rookSI = 0;
+        int rookTI = tI + 1;
+        if (tI > 3) {
+            rookSI = 7;
+            rookTI = tI - 1;
+        }
+        Piece* rookPiece = getPieceAtPosition(rookSI, tJ);
+        rookPiece->i = rookTI;
+        pd->sprite->moveTo(rookPiece->sprite, getX(rookTI), getY(tJ));
+    }
+
+    if (isEnpass) {
+        Piece* pawnPiece = getPieceAtPosition(tI, sourcePiece->isWhite ? tJ+1 : tJ-1);
+        removePiece(pawnPiece);
+    }
+    else if (isCapture) {
+        Piece* removedPiece = getPieceAtPosition(tI, tJ);
+        removePiece(removedPiece);
+    }
+
+    sourcePiece->i = tI;
+    sourcePiece->j = tJ;
+    pd->sprite->moveTo(sourcePiece->sprite, getX(tI), getY(tJ));
+
+    frame->i = tI;
+    frame->j = tJ;
+    pd->sprite->moveTo(frame->sprite, getX(tI), getY(tJ));
+}
+
+
 
 void frameTween(Frame* frame, float t) {
     int newX = getX(frame->i);
@@ -211,15 +287,12 @@ void moveFrame(int di, int dj) {
     pd->sprite->getPosition(frame->sprite, &x, &y);
     frame->startX = (int)x;
     frame->startY = (int)y;
-
     
-   
     if (di < 0 && frame->i >= -di) frame->i += di;
     if (di > 0 && frame->i <= 7 - di) frame->i += di;
     if (dj < 0 && frame->j >= -dj) frame->j += dj;
     if (dj > 0 && frame->j <= 7 - dj) frame->j += dj;
 
-    
     tweenFrame = tween(frame, frameTween, 10, NULL);
 }
 
@@ -231,6 +304,8 @@ void swapBoard(void){
     {
         updatePiecePosition(pieces[i]);
     }
+
+    pd->sprite->moveTo(frame->sprite, getX(frame->i), getY(frame->j));
 
 }
 
@@ -265,11 +340,11 @@ void tweenRandom(Piece* piece){
 
 void newGame(void){
     loadFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ");
-
-    //tweenRandom(getPieceAtPosition(0,0));
-    //tweenRandom(getPieceAtPosition(1, 0));
-    //tweenRandom(getPieceAtPosition(1, 1));
+    frame->i = 4;
+    frame->j = 6;
+    pd->sprite->moveTo(frame->sprite, getX(frame->i), getY(frame->j));
 }
+
 
 Piece* getPieceAtPosition(int i, int j){
     Piece* emptyPiece = NULL;

@@ -15,5 +15,7 @@ void loadFen(const char* fen);
 void updateBoard(void);
 void moveFrame(int x, int y);
 void touchPiece(void);
+void thinkMove(void);
+void makeMove(int move);
 Piece* getPieceAtPosition(int i, int j);
 
