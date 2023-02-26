@@ -1,7 +1,8 @@
 #!/bin/bash
 
+#export PLAYDATE_SDK_PATH="/Users/rzer/Developer/PlaydateSDK"
 export PLAYDATE_SDK_PATH="C:\Users\rzer\Documents\PlaydateSDK"
-export GAME_NAME="HelloWorld"
+export GAME_NAME="Chessmate"
 
 
 cd "$(dirname "$0")"
